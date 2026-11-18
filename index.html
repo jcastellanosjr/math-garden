@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Math Garden">
+  <meta name="theme-color" content="#fbf7f0">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Math Garden</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script>
+    if (window.KAKOOMA_CONFIG && KAKOOMA_CONFIG.SUPABASE_URL)
+      document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="core.js"></script>
+  <script src="kid.js"></script>
+</body>
+</html>
