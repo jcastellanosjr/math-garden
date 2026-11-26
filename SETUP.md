@@ -64,3 +64,14 @@ This takes about 20 minutes, one time. You'll create two free accounts:
 - **Privacy:** only first names, avatars and game results are stored. The kids' devices can add results but can't read detailed history; only your login can. Someone who found your URL could see the player names and could add fake scores. That's acceptable for a family app, but use nicknames if you'd prefer.
 - **Offline:** if an iPad loses Wi-Fi mid-game, results are kept on the device and uploaded the next time the app opens.
 - **Free-tier pause:** Supabase pauses free projects after about a week with no activity. If the kids take a long break and the app stops loading, open supabase.com and click **Restore project**.
+
+---
+
+## Updating to v2 (Adventure + word games)
+
+1. **Database first:** in Supabase, open **SQL Editor → New query**, paste all of `upgrade-v2.sql`, and click **Run**. You should see "Success. No rows returned." Existing players and history are kept.
+2. **Then the website:** in your GitHub repository, click **Add file → Upload files**, drag in **all the files** from the new folder, and click **Commit changes**. Files with the same name are replaced. Wait 1–2 minutes.
+3. On each iPad, close the app and reopen it (if it still looks old, pull down to refresh). Each child will be asked to make their buddy.
+4. On the parent page, open each child → **⚙️ Settings** and set a **Spelling level**, **Reading level** and the **Adventure mix**.
+
+If an iPad is updated before the database (step 1), its results wait on the device and upload automatically once the database is upgraded.

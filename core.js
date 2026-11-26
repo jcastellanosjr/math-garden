@@ -40,6 +40,9 @@
     race_allowed: true,
     daily_minutes: 0, // 0 = unlimited
     voice: true,
+    word_level: 2,   // index into K.WORD_LEVELS
+    read_tier: 1,    // 0..2
+    word_mix: 50,    // % of adventure stops that are word games
   };
   K.PRESETS = [
     { name: "Seedling", note: "Sums to 10 · 3 petals", s: { max_sum: 10, petals: 3, per_petal: 4, center_round: false } },
@@ -212,7 +215,12 @@
     _save(db) { localStorage.setItem(DEMO_KEY, JSON.stringify(db)); },
     async init() {},
     async listKids() { return this._db().kids.slice().sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)); },
-    async kidSummary(kidId) { return K.summarize(this._db().puzzles.filter((p) => p.kid_id === kidId)); },
+    async kidSummary(kidId) {
+      const db = this._db();
+      return { ...K.summarize(db.puzzles.filter((p) => p.kid_id === kidId)), state: (db.states || {})[kidId] || null };
+    },
+    async getState(kidId) { return (this._db().states || {})[kidId] || null; },
+    async saveState(kidId, state) { const db = this._db(); db.states = db.states || {}; db.states[kidId] = state; this._save(db); },
     async savePuzzle(puzzle, attempts) {
       const db = this._db();
       db.puzzles.push(puzzle);
@@ -233,6 +241,7 @@
       db.kids = db.kids.filter((k) => k.id !== id);
       db.puzzles = db.puzzles.filter((p) => p.kid_id !== id);
       db.attempts = db.attempts.filter((a) => a.kid_id !== id);
+      if (db.states) delete db.states[id];
       this._save(db);
     },
     async fetchHistory(kidId, sinceIso) {
@@ -246,6 +255,7 @@
 
   // Cloud store: Supabase (shared across all devices).
   const QUEUE_KEY = "kakooma.queue.v1";
+  const STATE_Q = "kakooma.stateQueue.v1";
   const cloud = {
     mode: "cloud",
     sb: null,
@@ -267,6 +277,9 @@
       return data;
     },
     async _insert(puzzle, attempts) {
+      // bulk inserts need identical keys on every row
+      const cols = [...new Set(attempts.flatMap((x) => Object.keys(x)))];
+      attempts = attempts.map((x) => Object.fromEntries(cols.map((c) => [c, x[c] === undefined ? null : x[c]])));
       let { error } = await this.sb.from("puzzles").insert(puzzle);
       if (error && error.code !== "23505") throw error; // 23505 = already saved (retry of a queued item)
       if (attempts.length) {
@@ -283,7 +296,25 @@
         localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
       }
     },
+    async getState(kidId) {
+      const { data, error } = await this.sb.from("kid_state").select("state").eq("kid_id", kidId).maybeSingle();
+      if (error) throw error;
+      return data ? data.state : null;
+    },
+    async saveState(kidId, state) {
+      const pend = JSON.parse(localStorage.getItem(STATE_Q) || "{}");
+      try {
+        const { error } = await this.sb.rpc("save_kid_state", { p_kid: kidId, p_state: state });
+        if (error) throw error;
+        if (pend[kidId]) { delete pend[kidId]; localStorage.setItem(STATE_Q, JSON.stringify(pend)); }
+      } catch (e) {
+        console.warn("State saved offline, will retry", e);
+        pend[kidId] = state; localStorage.setItem(STATE_Q, JSON.stringify(pend));
+      }
+    },
     async flushQueue() {
+      const pend = JSON.parse(localStorage.getItem(STATE_Q) || "{}");
+      for (const [k, st] of Object.entries(pend)) this.saveState(k, st);
       const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
       if (!q.length) return;
       const left = [];
